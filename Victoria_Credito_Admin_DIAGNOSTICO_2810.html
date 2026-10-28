@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Victoria Crédito Angola — Administração</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#050505;color:#fff}
+.header{background:#000;padding:20px 15px;text-align:center;border-bottom:2px solid #FFD700}
+.logo{color:#FFD700;font-size:22px;font-weight:800}
+.subtitle{font-size:12px;color:#ccc;margin-top:6px}
+.container{max-width:1050px;margin:auto;padding:18px}
+.card{background:#111;border:1px solid #665600;border-radius:16px;padding:20px;margin-bottom:18px}
+h2,h3{color:#FFD700;margin-top:0}
+input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #665600;background:#080808;color:#fff;margin:7px 0;font-size:14px}
+.btn{padding:12px 16px;border:0;border-radius:9px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-weight:bold;cursor:pointer}
+.btn.secondary{background:#292929;color:#fff;border:1px solid #555}
+.btn.danger{background:#5b1717;color:#fff}
+.hidden{display:none}
+.login{max-width:430px;margin:55px auto}
+.error{color:#ff7777;font-size:13px;margin:8px 0}
+.topbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:#181818;border:1px solid #3e3600;border-radius:12px;padding:15px;text-align:center}
+.stat b{display:block;font-size:25px;color:#FFD700;margin-top:5px}
+.filters{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:900px}
+th,td{padding:12px 10px;border-bottom:1px solid #2d2d2d;text-align:left;font-size:13px;vertical-align:top}
+th{color:#FFD700;background:#151515}
+.status{padding:6px 9px;border-radius:20px;font-size:11px;font-weight:bold;display:inline-block}
+.pendente{background:#514500;color:#ffe98a}
+.aprovado{background:#12451e;color:#91ffab}
+.recusado{background:#511717;color:#ff9a9a}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions button{font-size:11px;padding:7px 9px}
+.empty{text-align:center;color:#aaa;padding:30px}
+.note{color:#aaa;font-size:12px;line-height:1.5}
+@media(max-width:700px){
+ .stats{grid-template-columns:repeat(2,1fr)}
+ .filters{grid-template-columns:1fr}
+}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">👑 VICTORIA CRÉDITO ANGOLA</div>
+  <div class="subtitle">Área administrativa · VERSÃO TESTE 28/10</div>
+</header>
+
+<!-- LOGIN -->
+<section id="loginScreen" class="container">
+  <div class="card login">
+    <h2>🔐 Acesso administrativo</h2>
+    <p class="note">Entre com o e-mail e a palavra-passe do administrador criados no Firebase Authentication.</p>
+    <input id="email" type="email" autocomplete="username" placeholder="E-mail do administrador">
+    <input id="password" type="password" autocomplete="current-password" placeholder="Palavra-passe">
+    <div id="loginError" class="error" role="status" aria-live="polite"></div>
+    <div id="loginHelp" class="note">A verificar a ligação ao Firebase…</div>
+    <div class="note" style="color:#FFD700">Identificação: DIAGNÓSTICO-2810-A. Confirme que esta linha aparece.</div>
+    <button id="loginButton" class="btn" onclick="login()">ENTRAR</button>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<main id="adminScreen" class="container hidden">
+
+  <div class="card">
+    <div class="topbar">
+      <div>
+        <h2>📊 Pedidos de Crédito</h2>
+        <div class="note">Consulte os pedidos e atualize o estado de cada um.</div>
+      </div>
+      <button class="btn secondary" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">Todos<b id="total">0</b></div>
+    <div class="stat">Pendentes<b id="pending">0</b></div>
+    <div class="stat">Aprovados<b id="approved">0</b></div>
+    <div class="stat">Recusados<b id="rejected">0</b></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="filters">
+      <input id="search" oninput="render()" placeholder="🔎 Procurar por nome, BI ou telefone">
+      <select id="filter" onchange="render()">
+        <option value="Todos">Todos os estados</option>
+        <option value="Pendente">Pendentes</option>
+        <option value="Aprovado">Aprovados</option>
+        <option value="Recusado">Recusados</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="topbar" style="margin-bottom:12px">
+      <h3 style="margin:0">Lista de pedidos</h3>
+      <button class="btn danger" onclick="limparTodos()">Apagar todos</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Cliente</th>
+            <th>Contacto</th>
+            <th>Crédito</th>
+            <th>Prazo</th>
+            <th>Finalidade</th>
+            <th>Estado</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty hidden">Nenhum pedido encontrado.</div>
+  </div>
+
+  <div class="card">
+    <h3>ℹ️ Importante</h3>
+    <p class="note">
+      Esta versão usa Firebase Authentication e Firestore. O acesso depende das regras de segurança configuradas no projeto.
+    </p>
+  </div>
+</main>
+
+<script>
+// COLE aqui a configuração da aplicação Web Firebase (Firebase Console > Config)
+const firebaseConfig = {
+  apiKey: "AIzaSyB0EFrVMWXTZukRTeXOCoG6-VJNbAQ8rdE",
+  authDomain: "victoria-credito-angola.firebaseapp.com",
+  projectId: "victoria-credito-angola",
+  appId: "1:259074645009:web:f2b5cfa34e4af15b3725b0",
+};
+let db = null;
+try {
+  if (firebaseConfig.apiKey !== "COLOCAR_API_KEY" && firebaseConfig.projectId !== "COLOCAR_PROJECT_ID") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+} catch (e) { console.error(e); }
+let cachePedidos = [];
+let unsubscribePedidos = null;
+
+function mostrarErroLogin(e) {
+  const error = document.getElementById("loginError");
+  const help = document.getElementById("loginHelp");
+  const code = e && e.code ? e.code : "";
+  const mensagens = {
+    "auth/invalid-email": "O formato do e-mail não é válido. Verifique o endereço.",
+    "auth/user-not-found": "Não existe uma conta com este e-mail neste projeto Firebase.",
+    "auth/wrong-password": "A palavra-passe não está correta. Não a envie a ninguém; se necessário, redefina-a no Firebase.",
+    "auth/invalid-credential": "O e-mail ou a palavra-passe não foram aceites pelo Firebase. Confirme os dados e o projeto.",
+    "auth/too-many-requests": "Foram feitas demasiadas tentativas. Aguarde um pouco antes de tentar novamente.",
+    "auth/network-request-failed": "Não foi possível ligar ao Firebase. Verifique a Internet e tente novamente.",
+    "auth/operation-not-allowed": "O método E-mail/Palavra-passe não está ativado no Firebase Authentication.",
+    "auth/invalid-api-key": "A chave API da configuração Firebase não foi aceite. É necessário confirmar a configuração da aplicação Web.",
+    "auth/app-not-authorized": "Esta aplicação não está autorizada para o projeto Firebase configurado.",
+    "auth/unauthorized-domain": "O domínio desta página não está autorizado no Firebase Authentication. Abrir como ficheiro local pode causar este problema; publique num alojamento autorizado.",
+    "auth/internal-error": "O Firebase devolveu um erro interno. Tente novamente mais tarde.",
+    "auth/timeout": "A ligação ao serviço de autenticação não respondeu em 15 segundos. Isto não confirma que a palavra-passe esteja errada. Verifique a ligação à Internet e tente abrir o painel no Chrome com dados móveis ou Wi-Fi estáveis."
+  };
+  error.textContent = mensagens[code] || (code ? "Erro Firebase: " + code : "O painel não conseguiu concluir o login. Verifique se os scripts Firebase carregaram e se existe Internet.");
+  help.textContent = code ? "Código técnico: " + code : "Sem código de erro recebido. Se continuar assim, o problema pode ser o carregamento do Firebase.";
+  console.error("Erro no login Firebase:", e);
+}
+
+async function login(){
+  const error = document.getElementById("loginError");
+  const help = document.getElementById("loginHelp");
+  const button = document.getElementById("loginButton");
+  error.textContent = "";
+  help.textContent = "A contactar o Firebase… (versão teste 28/10)";
+  if (!window.firebase || !firebase.auth || !firebase.firestore) {
+    error.textContent = "As bibliotecas do Firebase não carregaram. Verifique a Internet e abra novamente o ficheiro.";
+    help.textContent = "Não foi possível iniciar o serviço de autenticação.";
+    return;
+  }
+  if (!db) {
+    error.textContent = "A configuração Firebase não foi iniciada. É necessário confirmar a configuração da aplicação Web.";
+    help.textContent = "Firebase não inicializado.";
+    return;
+  }
+  if (!document.getElementById("email").value.trim() || !document.getElementById("password").value) {
+    error.textContent = "Preencha o e-mail e a palavra-passe.";
+    help.textContent = "Faltam dados de entrada.";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "A VERIFICAR…";
+  try {
+    await Promise.race([
+      firebase.auth().signInWithEmailAndPassword(
+        document.getElementById("email").value.trim(),
+        document.getElementById("password").value
+      ),
+      new Promise((_, reject) => setTimeout(() => reject({
+        code: "auth/timeout",
+        message: "O pedido de autenticação não respondeu dentro de 15 segundos. A ligação ao serviço pode estar bloqueada; isto não confirma erro na palavra-passe."
+      }), 15000))
+    ]);
+    help.textContent = "Autenticação aceite. A abrir o painel…";
+    mostrarAdmin();
+  } catch (e) {
+    mostrarErroLogin(e);
+  } finally {
+    button.disabled = false;
+    button.textContent = "ENTRAR";
+  }
+}
+function logout(){
+  if (unsubscribePedidos) unsubscribePedidos();
+  firebase.auth().signOut();
+  document.getElementById("adminScreen").classList.add("hidden");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("password").value = "";
+}
+function mostrarAdmin(){
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("adminScreen").classList.remove("hidden");
+  carregarPedidos();
+}
+function carregarPedidos(){
+  if (!db) return;
+  if (unsubscribePedidos) unsubscribePedidos();
+  unsubscribePedidos = db.collection("pedidos").orderBy("criadoEm", "desc").onSnapshot(snap => {
+    cachePedidos = snap.docs.map(doc => ({id:doc.id, ...doc.data(), data: doc.data().criadoEm?.toDate?.().toLocaleString("pt-AO") || "Agora"}));
+    render();
+  }, err => {
+    document.getElementById("empty").classList.remove("hidden");
+    document.getElementById("empty").textContent = "Sem acesso aos pedidos. Verifique as regras de segurança e o UID do administrador.";
+    console.error(err);
+  });
+}
+function alterarEstado(id, estado){
+  if (!db) return;
+  db.collection("pedidos").doc(id).update({estado, atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()})
+    .catch(e => alert("Não foi possível alterar o estado. Verifique as regras do Firestore."));
+}
+function apagarPedido(id){
+  if (!confirm("Deseja apagar este pedido? Esta ação não pode ser desfeita.")) return;
+  db.collection("pedidos").doc(id).delete().catch(e => alert("Não foi possível apagar o pedido."));
+}
+function limparTodos(){ alert("Por segurança, a eliminação em massa foi desativada. Apague apenas um pedido de cada vez."); }
+function esc(text){ return String(text ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m])); }
+function render(){
+  const pedidos = cachePedidos;
+  const busca = document.getElementById("search").value.toLowerCase().trim();
+  const filtro = document.getElementById("filter").value;
+  document.getElementById("total").textContent = pedidos.length;
+  document.getElementById("pending").textContent = pedidos.filter(p=>p.estado==="Pendente").length;
+  document.getElementById("approved").textContent = pedidos.filter(p=>p.estado==="Aprovado").length;
+  document.getElementById("rejected").textContent = pedidos.filter(p=>p.estado==="Recusado").length;
+  const filtrados = pedidos.filter(p => {
+    const texto = `${p.nome||""} ${p.bi||""} ${p.telefone||p.tel||""}`.toLowerCase();
+    return (!busca || texto.includes(busca)) && (filtro === "Todos" || p.estado === filtro);
+  });
+  const tbody = document.getElementById("tbody"), empty = document.getElementById("empty");
+  if(!filtrados.length){ tbody.innerHTML=""; empty.classList.remove("hidden"); empty.textContent="Nenhum pedido encontrado."; return; }
+  empty.classList.add("hidden");
+  tbody.innerHTML = filtrados.map(p => `
+    <tr><td>${esc(p.data)}</td><td><strong>${esc(p.nome)}</strong><br><small>BI: não armazenado nesta versão</small></td>
+    <td>${esc(p.telefone||p.tel||"")}</td><td><strong>${esc(p.valor)} KZ</strong><br><small>Rendimento: ${esc(p.rendimento||"-")} KZ</small></td>
+    <td>${esc(p.prazoDias||p.prazo)} dias</td><td>${esc(p.finalidade)}</td>
+    <td><span class="status ${String(p.estado||"Pendente").toLowerCase()}">${esc(p.estado||"Pendente")}</span></td>
+    <td><div class="actions"><button class="btn" onclick="alterarEstado('${p.id}','Aprovado')">✓ Aprovar</button><button class="btn secondary" onclick="alterarEstado('${p.id}','Pendente')">⏳ Pendente</button><button class="btn danger" onclick="alterarEstado('${p.id}','Recusado')">✕ Recusar</button><button class="btn secondary" onclick="apagarPedido('${p.id}')">Apagar</button></div></td></tr>`).join("");
+}
+if (!window.firebase || !firebase.auth || !firebase.firestore) {
+  document.getElementById("loginError").textContent = "As bibliotecas do Firebase não carregaram. Ligue o telemóvel à Internet e abra o ficheiro novamente.";
+  document.getElementById("loginHelp").textContent = "Verifique se o navegador permite carregar scripts de https://www.gstatic.com.";
+} else if (!db) {
+  document.getElementById("loginError").textContent = "A configuração Firebase não foi inicializada. Consulte as definições da aplicação Web.";
+  document.getElementById("loginHelp").textContent = "Firebase não inicializado.";
+} else {
+  document.getElementById("loginHelp").textContent = "Firebase carregado. Pode tentar entrar.";
+  firebase.auth().onAuthStateChanged(user => { if(user && db) mostrarAdmin(); });
+}
+
+</script>
+</body>
+</html>
