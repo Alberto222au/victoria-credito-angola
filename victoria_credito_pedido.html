@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Victoria Crédito Angola — Pedido</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#050505;color:#fff}
+.header{background:#000;padding:22px 15px;text-align:center;border-bottom:2px solid #FFD700}
+.logo{font-size:23px;font-weight:800;color:#FFD700}
+.subtitle{font-size:12px;color:#ddd;margin-top:7px}
+.container{max-width:520px;margin:auto;padding:15px}
+.card{background:#111;border:1px solid #5f5000;border-radius:16px;padding:20px;margin-bottom:15px;box-shadow:0 8px 25px #000}
+h3{margin-top:0;color:#FFD700}
+label{display:block;text-align:left;font-size:13px;margin:13px 2px 5px;color:#eee}
+input,select{width:100%;padding:13px;border-radius:9px;border:1px solid #6b5a00;background:#080808;color:#fff;font-size:15px;outline:none}
+input:focus,select:focus{border-color:#FFD700}
+.btn{width:100%;padding:15px;border:0;border-radius:10px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-weight:bold;font-size:15px;cursor:pointer;margin-top:18px}
+.note{font-size:11px;color:#aaa;line-height:1.5;margin-top:14px}
+.summary{display:none;background:#181818;border:1px solid #806d00;border-radius:12px;padding:15px;margin-top:18px;text-align:left}
+.summary strong{color:#FFD700}
+.error{color:#ff7777;font-size:12px;margin-top:8px;display:none}
+.success{display:none;background:#102313;border:1px solid #4caf50;color:#d8ffd8;padding:13px;border-radius:10px;margin-top:15px;font-size:13px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">👑 VICTORIA CRÉDITO ANGOLA</div>
+  <div class="subtitle">Pedido de crédito online</div>
+</header>
+
+<main class="container">
+  <section class="card">
+    <h3>📝 Pedir Crédito</h3>
+
+    <label for="nome">Nome completo</label>
+    <input id="nome" type="text" placeholder="Digite o seu nome completo">
+
+    <label for="bi">Nº do BI</label>
+    <input id="bi" type="text" placeholder="Digite o número do BI">
+
+    <label for="tel">Telefone / WhatsApp</label>
+    <input id="tel" type="tel" placeholder="Ex.: 923 000 000">
+
+    <label for="valor">Valor pretendido</label>
+    <select id="valor">
+      <option value="50000">50.000 KZ</option>
+      <option value="100000">100.000 KZ</option>
+      <option value="200000">200.000 KZ</option>
+      <option value="250000">250.000 KZ</option>
+      <option value="500000">500.000 KZ</option>
+    </select>
+
+    <label for="prazo">Prazo pretendido</label>
+    <select id="prazo">
+      <option value="30">30 dias</option>
+      <option value="60">60 dias</option>
+      <option value="90">90 dias</option>
+      <option value="180">180 dias</option>
+    </select>
+
+    <label for="rendimento">Rendimento mensal aproximado (KZ)</label>
+    <input id="rendimento" type="number" min="0" placeholder="Ex.: 150000">
+
+    <label for="finalidade">Finalidade do crédito</label>
+    <select id="finalidade">
+      <option value="">Selecione uma opção</option>
+      <option>Negócio</option>
+      <option>Educação</option>
+      <option>Saúde</option>
+      <option>Despesas pessoais</option>
+      <option>Outro</option>
+    </select>
+
+    <div id="erro" class="error"></div>
+
+    <button class="btn" onclick="reverPedido()">🔎 REVER PEDIDO</button>
+
+    <div id="summary" class="summary"></div>
+
+    <button id="whatsappBtn" class="btn" style="display:none" onclick="enviarWhatsApp()">📲 ENVIAR PEDIDO NO WHATSAPP</button>
+    <button id="firebaseBtn" class="btn" style="display:none" onclick="guardarNoFirebase()">🔒 ENVIAR PEDIDO PARA ANÁLISE</button>
+    <div id="firebaseStatus" class="note" role="status"></div>
+
+    <div id="success" class="success">
+      Pedido preparado. Ao tocar no botão acima, será aberto o WhatsApp com os dados preenchidos.
+    </div>
+
+    <p class="note">
+      O envio deste formulário representa uma solicitação de crédito e não significa aprovação automática.
+      A análise e as condições do crédito devem ser definidas pela entidade responsável.
+    </p>
+  </section>
+</main>
+
+<script>
+// COLE aqui a configuração da aplicação Web Firebase (Firebase Console > Config)
+const firebaseConfig = {
+  apiKey: "AIzaSyB0EFrVMWXTZukRTeXOCoG6-VJNbAQ8rdE",
+  authDomain: "victoria-credito-angola.firebaseapp.com",
+  projectId: "victoria-credito-angola",
+  appId: "1:259074645009:web:f2b5cfa34e4af15b3725b0"
+};
+let db = null;
+try {
+  if (firebaseConfig.apiKey !== "COLOCAR_API_KEY" && firebaseConfig.projectId !== "COLOCAR_PROJECT_ID") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+} catch (e) { console.error("Firebase não inicializado", e); }
+let pedidoAtual = null;
+
+// SUBSTITUA pelo número oficial de WhatsApp da Victoria Crédito Angola,
+// usando o formato internacional, somente números.
+// Exemplo: 244923000000
+const WHATSAPP = "244941214948";
+
+function kz(valor){
+  return Number(valor).toLocaleString("pt-AO") + " KZ";
+}
+
+function reverPedido(){
+  const nome = document.getElementById("nome").value.trim();
+  const bi = document.getElementById("bi").value.trim();
+  const tel = document.getElementById("tel").value.trim();
+  const valor = document.getElementById("valor").value;
+  const prazo = document.getElementById("prazo").value;
+  const rendimento = document.getElementById("rendimento").value;
+  const finalidade = document.getElementById("finalidade").value;
+  const erro = document.getElementById("erro");
+
+  erro.style.display = "none";
+
+  if(!nome || !bi || !tel || !rendimento || !finalidade){
+    erro.textContent = "Preencha todos os campos obrigatórios antes de continuar.";
+    erro.style.display = "block";
+    return;
+  }
+
+  pedidoAtual = {nome,bi,tel,valor,prazo,rendimento,finalidade};
+
+  document.getElementById("summary").innerHTML = `
+    <strong>Resumo do pedido</strong><br><br>
+    Nome: ${nome}<br>
+    BI: ${bi}<br>
+    WhatsApp: ${tel}<br>
+    Valor solicitado: ${kz(valor)}<br>
+    Prazo pretendido: ${prazo} dias<br>
+    Rendimento mensal: ${kz(rendimento)}<br>
+    Finalidade: ${finalidade}
+  `;
+
+  document.getElementById("summary").style.display = "block";
+  document.getElementById("whatsappBtn").style.display = "block";
+  document.getElementById("firebaseBtn").style.display = db ? "block" : "none";
+  document.getElementById("success").style.display = "block";
+}
+
+async function guardarNoFirebase(){
+  const status = document.getElementById("firebaseStatus");
+  if (!db) {
+    status.textContent = "A configuração Firebase ainda não foi preenchida. Use o WhatsApp para o teste ou conclua a configuração primeiro.";
+    return;
+  }
+  if (!pedidoAtual) return;
+  status.textContent = "A enviar pedido…";
+  try {
+    // Não guardamos o número do BI na base de dados nesta versão inicial.
+    // Os pedidos públicos só devem poder ser criados; a leitura/alteração fica reservada ao administrador.
+    await db.collection("pedidos").add({
+      nome: pedidoAtual.nome,
+      telefone: pedidoAtual.tel,
+      valor: Number(pedidoAtual.valor),
+      prazoDias: Number(pedidoAtual.prazo),
+      rendimento: Number(pedidoAtual.rendimento),
+      finalidade: pedidoAtual.finalidade,
+      estado: "Pendente",
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    status.textContent = "Pedido enviado para análise com sucesso. Não significa aprovação automática.";
+    document.getElementById("firebaseBtn").disabled = true;
+  } catch (e) {
+    console.error(e);
+    status.textContent = "Não foi possível guardar no Firebase. Verifique a configuração e as regras. Pode usar WhatsApp como alternativa.";
+  }
+}
+
+function enviarWhatsApp(){
+  if(!pedidoAtual) return;
+
+  const p = pedidoAtual;
+  const mensagem =
+`PEDIDO DE CRÉDITO — VICTORIA CRÉDITO ANGOLA
+
+Nome: ${p.nome}
+Nº BI: ${p.bi}
+WhatsApp: ${p.tel}
+Valor solicitado: ${kz(p.valor)}
+Prazo pretendido: ${p.prazo} dias
+Rendimento mensal: ${kz(p.rendimento)}
+Finalidade: ${p.finalidade}
+
+Solicito a análise do meu pedido de crédito.`;
+
+  const url = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(mensagem);
+  window.open(url, "_blank");
+}
+</script>
+
+</body>
+</html>
