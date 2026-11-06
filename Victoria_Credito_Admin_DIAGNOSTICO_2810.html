@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Victoria Crédito Angola — Administração</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#050505;color:#fff}
@@ -15,12 +16,13 @@ body{margin:0;font-family:Arial,sans-serif;background:#050505;color:#fff}
 h2,h3{color:#FFD700;margin-top:0}
 input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #665600;background:#080808;color:#fff;margin:7px 0;font-size:14px}
 .btn{padding:12px 16px;border:0;border-radius:9px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-weight:bold;cursor:pointer}
-.btn.secondary{background:#292929;color:#fff;border:1px solid #555}
-.btn.danger{background:#5b1717;color:#fff}
-.btn:disabled{opacity:.6}
+.btn:disabled{opacity:.5}
+.secondary{background:#292929;color:#fff;border:1px solid #555}
+.danger{background:#5b1717;color:#fff}
 .hidden{display:none}
 .login{max-width:430px;margin:55px auto}
 .error{color:#ff7777;font-size:13px;margin:8px 0}
+.note{color:#aaa;font-size:12px;line-height:1.5}
 .topbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .stat{background:#181818;border:1px solid #3e3600;border-radius:12px;padding:15px;text-align:center}
@@ -31,166 +33,4 @@ table{width:100%;border-collapse:collapse;min-width:900px}
 th,td{padding:12px 10px;border-bottom:1px solid #2d2d2d;text-align:left;font-size:13px;vertical-align:top}
 th{color:#FFD700;background:#151515}
 .status{padding:6px 9px;border-radius:20px;font-size:11px;font-weight:bold;display:inline-block}
-.pendente{background:#514500;color:#ffe98a}
-.aprovado{background:#12<section id="loginScreen" class="container">
-<div class="card login">
-<h2>🔐 Acesso administrativo</h2>
-<p class="note">Entre com o e-mail e a palavra-passe do administrador criados no Firebase Authentication.</p>
-<input id="email" type="email" autocomplete="username" placeholder="E-mail do administrador">
-<input id="password" type="password" autocomplete="current-password" placeholder="Palavra-passe">
-<div id="loginError" class="error" role="status" aria-live="polite"></div>
-<div id="loginHelp" class="note">A verificar a ligação ao Firebase…</div>
-<button id="loginButton" class="btn" onclick="login()">ENTRAR</button>
-</div>
-</section>
-
-<main id="adminScreen" class="container hidden">
-<div class="card">
-<div class="topbar">
-<div>
-<h2>📊 Pedidos de Crédito</h2>
-<div class="note">Consulte os pedidos e atualize o estado de cada um.</div>
-</div>
-<button class="btn secondary" onclick="logout()">Sair</button>
-</div>
-</div>
-
-<div class="stats">
-<div class="stat">Todos<b id="total">0</b></div>
-<div class="stat">Pendentes<b id="pending">0</b></div>
-<div class="stat">Aprovados<b id="approved">0</b></div>
-<div class="stat">Recusados<b id="rejected">0</b></div>
-</div>
-
-<div class="card" style="margin-top:18px">
-<div class="filters">
-<input id="search" oninput="render()" placeholder="🔎 Procurar por nome, BI ou telefone">
-<select id="filter" onchange="render()">
-<option value="Todos">Todos os estados</option>
-<option value="Pendente">Pendentes</option>
-<option value="Aprovado">Aprovados</option>
-<option value="Recusado">Recusados</option>
-</select>
-</div>
-</div>
-
-<div class="card">
-<div class="topbar" style="margin-bottom:12px">
-<h3 style="margin:0">Lista de pedidos</h3>
-<button class="btn danger" onclick="limparTodos()">Apagar todos</button>
-</div>
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th>Data</th><th>Cliente</th><th>Contacto</th><th>Crédito</th>
-<th>Prazo</th><th>Finalidade</th><th>Estado</th><th>Ações</th>
-</tr>
-</thead>
-<tbody id="tbody"></tbody>
-</table>
-</div>
-<di<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB0EFrVMWXTZukRTeXOCoG6-VJNbAQ8rdE",
-  authDomain: "victoria-credito-angola.firebaseapp.com",
-  projectId: "victoria-credito-angola",
-  appId: "1:259074645009:web:f2b5cfa34e4af15b3725b0"
-};
-
-let db = null;
-let cachePedidos = [];
-let unsubscribePedidos = null;
-
-try {
-  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-} catch (e) {
-  console.error("Erro ao iniciar Firebase:", e);
-}
-
-function mostrarErroLogin(e) {
-  const error = document.getElementById("loginError");
-  const help = document.getElementById("loginHelp");
-  const code = e && e.code ? e.code : "";
-
-  const mensagens = {
-    "auth/invalid-email": "O formato do e-mail não é válido.",
-    "auth/user-not-found": "Não existe uma conta com este e-mail.",
-    "auth/wrong-password": "A palavra-passe não foi aceite. Não a partilhe com ninguém.",
-    "auth/invalid-credential": "O e-mail ou a palavra-passe não foram aceites.",
-    "auth/too-many-requests": "Demasiadas tentativas. Aguarde um pouco.",
-    "auth/network-request-failed": "Falha de ligação. Verifique a Internet.",
-    "auth/operation-not-allowed": "Ative E-mail/Palavra-passe no Firebase Authentication.",
-    "auth/unauthorized-domain": "Este domínio não está autorizado no Firebase Authentication.",
-    "auth/timeout": "O Firebase demorou demasiado a responder. Verifique a Internet e tente novamente."
-  };
-
-  error.textContent = mensagens[code] || (code ? "Erro Firebase: " + code : "Não foi possível entrar.");
-  help.textContent = code ? "Código técnico: " + code : "Verifique a ligação e a configuração Firebase.";
-  console.error("Erro no login:", e);
-}
-
-async function login() {
-  const error = document.getElementById("loginError");
-  const help = document.getElementById("loginHelp");
-  const button = document.getElementById("loginButton");
-
-  error.textContent = "";
-
-  if (!window.firebase || !firebase.auth || !firebase.firestore || !db) {
-    error.textConte<script>
-function alterarEstado(id, estado) {
-  if (!db) return;
-
-  db.collection("pedidos").doc(id).update({
-    estado: estado.toLowerCase(),
-    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(e => alert("Não foi possível alterar o estado: " + (e.message || e.code)));
-}
-
-function apagarPedido(id) {
-  if (!confirm("Deseja apagar este pedido? Esta ação não pode ser desfeita.")) return;
-
-  db.collection("pedidos").doc(id).delete()
-    .catch(e => alert("Não foi possível apagar o pedido: " + (e.message || e.code)));
-}
-
-function limparTodos() {
-  alert("Por segurança, a eliminação em massa está desativada. Apague apenas um pedido de cada vez.");
-}
-
-function esc(text) {
-  return String(text ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;",
-    "'":"&#039;"
-  }[m]));
-}
-
-function render() {
-  const pedidos = cachePedidos;
-  const busca = document.getElementById("search").value.toLowerCase().trim();
-  const filtro = document.getElementById("filter").value;
-
-  document.getElementById("total").textContent = pedidos.length;
-  document.getElementById("pending").textContent = pedidos.filter(p => p.estado === "Pendente").length;
-  document.getElementById("approved").textContent = pedidos.filter(p => p.estado === "Aprovado").length;
-  document.getElementById("rejected").textContent = pedidos.filter(p => p.estado === "Recusado").length;
-
-  const filtrados = pedidos.filter(p => {
-    const texto = `${p.nome || ""} ${p.bi || ""} ${p.telefone || p.tel || ""}`.toLowerCase();
-    return (!busca || texto.includes(busca)) && (filtro === "Todos" || p.estado === filtro);
-  });
-
-  const tbody = document.getElementById("tbody");
-  const empty = document.getElementById("empty");
-
-  if (!filtrados.length) {
-    tbody.innerHTML = "";
-    empty.classList.remove("hidden");
-    empty.textContent = pedidos.length
-      ? "Nenhum pedido corresponde à pesquisa ou ao estado selecionado."
-      : "Nenhum pedido encontrado.";
+.pendente{background:#5145
