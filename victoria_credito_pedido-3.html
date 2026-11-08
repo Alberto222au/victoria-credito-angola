@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -48,4 +49,126 @@ a{color:#FFD700}
 <option value="500000">500.000 Kz</option>
 </select>
 
-<label>Prazo de pa
+<label>Prazo de pagamento</label>
+<select id="prazo" required>
+<option value="">Selecione o prazo</option>
+<option value="30">30 dias</option>
+<option value="60">60 dias</option>
+<option value="90">90 dias</option>
+<option value="180">180 dias</option>
+</select>
+
+<label>Rendimento mensal (Kz)</label>
+<input id="rendimento" type="number" min="0" placeholder="Ex.: 15000" required>
+
+<label>Finalidade do crédito</label>
+<select id="finalidade" required>
+<option value="">Selecione a finalidade</option>
+<option value="Negócio">Negócio</option>
+<option value="Educação">Educação</option>
+<option value="Saúde">Saúde</option>
+<option value="Despesas pessoais">Despesas pessoais</option>
+<option value="Outra finalidade">Outra finalidade</option>
+</select>
+
+<button id="enviar" type="submit">ENVIAR PEDIDO PARA ANÁLISE</button>
+</form>
+
+<div id="mensagem" role="status"></div>
+<p class="nota">Os pedidos ficam sujeitos à análise. O número do BI não é guardado na base de dados Firebase; será incluído apenas na mensagem de WhatsApp após o envio.</p>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB0EFrVMWXTZukRTeXOCoG6-VJNbAQ8rdE",
+  authDomain: "victoria-credito-angola.firebaseapp.com",
+  projectId: "victoria-credito-angola",
+  appId: "1:259074645009:web:f2b5cfa34e4af15b3725b0"
+};
+
+const mensagem = document.getElementById("mensagem");
+const botao = document.getElementById("enviar");
+let db;
+
+try {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  db = firebase.firestore();
+} catch (erro) {
+  mensagem.textContent = "Erro ao iniciar o Firebase. Atualize a página.";
+}
+
+document.getElementById("formPedido").addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  if (!db) {
+    mensagem.textContent = "Firebase não está disponível. Tente novamente.";
+    return;
+  }
+
+  const nome = document.getElementById("nome").value.trim();
+  const bi = document.getElementById("bi").value.trim();
+  const telefone = document.getElementById("telefone").value.trim();
+  const valor = Number(document.getElementById("valor").value);
+  const prazoDias = Number(document.getElementById("prazo").value);
+  const rendimento = Number(document.getElementById("rendimento").value);
+  const finalidade = document.getElementById("finalidade").value;
+
+  if (!nome || !bi || !telefone || !valor || !prazoDias ||
+      !Number.isFinite(rendimento) || rendimento < 0 || !finalidade) {
+    mensagem.textContent = "Por favor, preencha todos os campos corretamente.";
+    return;
+  }
+
+  botao.disabled = true;
+  botao.textContent = "A ENVIAR PEDIDO...";
+  mensagem.textContent = "A guardar o pedido. Aguarde...";
+
+  try {
+    await db.collection("pedidos").add({
+      nome: nome,
+      telefone: telefone,
+      valor: valor,
+      prazoDias: prazoDias,
+      rendimento: rendimento,
+      finalidade: finalidade,
+      estado: "pendente",
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    mensagem.innerHTML =
+      "✅ Pedido guardado com sucesso no Firebase!<br>" +
+      "Para enviar também os dados por WhatsApp, toque no link abaixo:<br>" +
+      '<a id="whatsapp" target="_blank" rel="noopener">Abrir WhatsApp</a>';
+
+    const texto = 
+      "NOVO PEDIDO DE CRÉDITO - VICTORIA CRÉDITO ANGOLA\n\n" +
+      "Nome: " + nome + "\n" +
+      "BI: " + bi + "\n" +
+      "Telefone: " + telefone + "\n" +
+      "Valor: " + valor + " Kz\n" +
+      "Prazo: " + prazoDias + " dias\n" +
+      "Rendimento: " + rendimento + " Kz\n" +
+      "Finalidade: " + finalidade;
+
+    document.getElementById("whatsapp").href =
+      "https://wa.me/244941214948?text=" + encodeURIComponent(texto);
+
+    document.getElementById("formPedido").reset();
+
+  } catch (erro) {
+    console.error(erro);
+    mensagem.textContent = "Erro ao guardar: " +
+      (erro.code || erro.message || "Verifique a ligação à internet.");
+  } finally {
+    botao.disabled = false;
+    botao.textContent = "ENVIAR PEDIDO PARA ANÁLISE";
+  }
+});
+</script>
+</body>
+</html>
