@@ -1,38 +1,51 @@
-
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Victoria Crédito Angola — Pedido</title>
+<title>Victoria Crédito Angola — Pedido de Crédito</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#050505;color:#fff}
-.header{background:#000;padding:22px 15px;text-align:center;border-bottom:2px solid #FFD700}
-.logo{font-size:23px;font-weight:800;color:#FFD700}
-.subtitle{font-size:12px;color:#ddd;margin-top:7px}
-.container{max-width:520px;margin:auto;padding:15px}
-.card{background:#111;border:1px solid #5f5000;border-radius:16px;padding:20px;margin-bottom:15px}
-h3{margin-top:0;color:#FFD700}
-label{display:block;text-align:left;font-size:13px;margin:13px 2px 5px;color:#eee}
-input,select{width:100%;padding:13px;border-radius:9px;border:1px solid #6b5a00;background:#080808;color:#fff;font-size:15px}
-.btn{width:100%;padding:15px;border:0;border-radius:10px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-weight:bold;font-size:15px;cursor:pointer;margin-top:18px}
-.note{font-size:11px;color:#aaa;line-height:1.5;margin-top:14px}
-.summary{display:none;background:#181818;border:1px solid #806d00;border-radius:12px;padding:15px;margin-top:18px;text-align:left}
-.summary strong{color:#FFD700}
-.error{color:#ff7777;font-size:12px;margin-top:8px;display:none}
-.success{display:none;background:#102313;border:1px solid #4caf50;color:#d8ffd8;padding:13px;border-radius:10px;margin-top:15px;font-size:13px}
+body{margin:0;padding:20px;background:#050505;color:white;font-family:Arial,sans-serif}
+header{text-align:center;color:#FFD700;font-size:23px;font-weight:bold;margin:15px 0}
+.sub{text-align:center;color:#ddd;margin-bottom:25px}
+main{max-width:520px;margin:auto;background:#111;padding:22px;border:1px solid #FFD700;border-radius:15px}
+h2{color:#FFD700;text-align:center}
+label{display:block;margin-top:16px;margin-bottom:7px}
+input,select,textarea{width:100%;padding:14px;border-radius:8px;border:1px solid #888;background:#fff;color:#111;font-size:16px}
+button{width:100%;padding:15px;margin-top:22px;border:0;border-radius:9px;background:linear-gradient(90deg,#FFD700,#FFA500);color:#111;font-size:16px;font-weight:bold}
+button:disabled{opacity:.6}
+#mensagem{margin-top:18px;text-align:center;line-height:1.5;overflow-wrap:anywhere}
+a{color:#FFD700}
+.nota{font-size:13px;color:#ccc;margin-top:15px;line-height:1.5}
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
-<header class="header">
-<div class="logo">👑 VICTORIA CRÉDITO ANGOLA</div>
-<div class="subtitle">Pedido de crédito online</div>
-</header>
-<main class="container">
-<section class="card">
-<h3>📝 Pedir Crédito</h3>
-<label for="nome">Nome completo</label>
-<input id="nome" type="text" placeholder="
+
+<header>👑 VICTORIA CRÉDITO ANGOLA</header>
+<div class="sub">Pedido de crédito online</div>
+
+<main>
+<h2>📝 Pedir Crédito</h2>
+
+<form id="formPedido">
+<label>Nome completo</label>
+<input id="nome" type="text" placeholder="Digite o seu nome completo" required minlength="3">
+
+<label>Número do BI</label>
+<input id="bi" type="text" placeholder="Digite o número do BI" required>
+
+<label>Telefone</label>
+<input id="telefone" type="tel" placeholder="Ex.: 929455906" required minlength="9">
+
+<label>Valor do crédito</label>
+<select id="valor" required>
+<option value="">Selecione o valor</option>
+<option value="30000">30.000 Kz</option>
+<option value="100000">100.000 Kz</option>
+<option value="200000">200.000 Kz</option>
+<option value="250000">250.000 Kz</option>
+<option value="500000">500.000 Kz</option>
+</select>
+
+<label>Prazo de pa
