@@ -1,36 +1,258 @@
+
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Victoria Crédito Angola — Administração</title>
-
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#050505;color:#fff}
-.header{background:#000;padding:20px 15px;text-align:center;border-bottom:2px solid #FFD700}
-.logo{color:#FFD700;font-size:22px;font-weight:800}
-.subtitle{font-size:12px;color:#ccc;margin-top:6px}
-.container{max-width:1050px;margin:auto;padding:18px}
-.card{background:#111;border:1px solid #665600;border-radius:16px;padding:20px;margin-bottom:18px}
-h2,h3{color:#FFD700;margin-top:0}
-input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #665600;background:#080808;color:#fff;margin:7px 0;font-size:14px}
-.btn{padding:12px 16px;border:0;border-radius:9px;background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;font-weight:bold;cursor:pointer}
-.btn:disabled{opacity:.5}
-.secondary{background:#292929;color:#fff;border:1px solid #555}
-.danger{background:#5b1717;color:#fff}
-.hidden{display:none}
-.login{max-width:430px;margin:55px auto}
-.error{color:#ff7777;font-size:13px;margin:8px 0}
-.note{color:#aaa;font-size:12px;line-height:1.5}
-.topbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.stat{background:#181818;border:1px solid #3e3600;border-radius:12px;padding:15px;text-align:center}
-.stat b{display:block;font-size:25px;color:#FFD700;margin-top:5px}
-.filters{display:grid;grid-template-columns:2fr 1fr;gap:10px}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:900px}
-th,td{padding:12px 10px;border-bottom:1px solid #2d2d2d;text-align:left;font-size:13px;vertical-align:top}
-th{color:#FFD700;background:#151515}
-.status{padding:6px 9px;border-radius:20px;font-size:11px;font-weight:bold;display:inline-block}
-.pendente{background:#5145
+body{margin:0;background:#050505;color:white;font-family:Arial,sans-serif;padding:15px}
+header{text-align:center;color:#FFD700;font-size:22px;font-weight:bold;padding:20px 5px}
+.sub{text-align:center;color:#ccc;margin-bottom:20px}
+main{max-width:900px;margin:auto}
+.card{background:#111;border:1px solid #FFD700;border-radius:12px;padding:18px;margin-bottom:18px}
+h2{color:#FFD700;font-size:19px}
+input{width:100%;padding:13px;margin:8px 0;background:white;color:#111;border:1px solid #aaa;border-radius:7px;font-size:16px}
+button{padding:11px 14px;border:0;border-radius:7px;background:#FFD700;color:#111;font-weight:bold;margin:5px 3px;cursor:pointer}
+button:disabled{opacity:.5}
+.recusar{background:#e05252;color:white}
+.aprovar{background:#36b36a;color:white}
+.apagar{background:#777;color:white}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:#202020;padding:13px 5px;text-align:center;border-radius:8px}
+.stat strong{display:block;color:#FFD700;font-size:23px}
+.stat span{font-size:12px}
+.pedido{background:#202020;border:1px solid #555;border-radius:9px;padding:14px;margin-top:12px;overflow-wrap:anywhere}
+.estado{color:#FFD700;font-weight:bold}
+#mensagem{margin:12px 0;overflow-wrap:anywhere}
+.oculto{display:none}
+@media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>👑 VICTORIA CRÉDITO ANGOLA</header>
+<div class="sub">Área administrativa</div>
+
+<main>
+<section class="card" id="login">
+<h2>🔐 Acesso do administrador</h2>
+<input id="email" type="email" placeholder="E-mail do administrador">
+<input id="senha" type="password" placeholder="Palavra-passe">
+<button id="entrar">ENTRAR</button>
+<div id="msgLogin"></div>
+</section>
+
+<section id="painel" class="oculto">
+<div class="card">
+<h2>📊 Resumo dos pedidos</h2>
+<div class="stats">
+<div class="stat"><strong id="todos">0</strong><span>Todos</span></div>
+<div class="stat"><strong id="pendentes">0</strong><span>Pendentes</span></div>
+<div class="stat"><strong id="aprovados">0</strong><span>Aprovados</span></div>
+<div class="stat"><strong id="recusados">0</strong><span>Recusados</span></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📋 Pedidos recebidos</h2>
+<input id="pesquisa" type="search" placeholder="Pesquisar nome ou telefone">
+<div id="mensagem"></div>
+<div id="lista"></div>
+<button id="sair">SAIR</button>
+</div>
+</section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+ apiKey: "AIzaSyB0EFrVMWXTZukRTeXOCoG6-VJNbAQ8rdE",
+ authDomain: "victoria-credito-angola.firebaseapp.com",
+ projectId: "victoria-credito-angola",
+ appId: "1:259074645009:web:f2b5cfa34e4af15b3725b0"
+};
+
+const UID_ADMIN = "pV7eDfDDZVNPGESer9nYuqyBYJu1";
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const el = id => document.getElementById(id);
+let pedidos = [];
+let listener = null;
+
+function mostrarMensagem(texto){
+ el("mensagem").textContent = texto;
+}
+
+el("entrar").addEventListener("click", async () => {
+ const email = el("email").value.trim();
+ const senha = el("senha").value;
+
+ if(!email || !senha){
+  el("msgLogin").textContent = "Introduza o e-mail e a palavra-passe.";
+  return;
+ }
+
+ el("entrar").disabled = true;
+ el("msgLogin").textContent = "A verificar acesso...";
+
+ try{
+  const resultado = await auth.signInWithEmailAndPassword(email,senha);
+
+  if(resultado.user.uid !== UID_ADMIN){
+   await auth.signOut();
+   el("msgLogin").textContent = "Acesso não autorizado.";
+   return;
+  }
+
+  el("msgLogin").textContent = "";
+ }catch(e){
+  el("msgLogin").textContent = "Erro: " + (e.code || e.message);
+ }finally{
+  el("entrar").disabled = false;
+ }
+});
+
+auth.onAuthStateChanged(user => {
+ if(listener){
+  listener();
+  listener = null;
+ }
+
+ if(user && user.uid === UID_ADMIN){
+  el("login").classList.add("oculto");
+  el("painel").classList.remove("oculto");
+  carregarPedidos();
+ }else{
+  el("painel").classList.add("oculto");
+  el("login").classList.remove("oculto");
+ }
+});
+
+function carregarPedidos(){
+ mostrarMensagem("A carregar pedidos...");
+
+ listener = db.collection("pedidos")
+ .orderBy("criadoEm","desc")
+ .onSnapshot(snapshot => {
+  pedidos = snapshot.docs.map(doc => ({
+   id:doc.id,
+   ...doc.data()
+  }));
+  atualizar();
+ }, erro => {
+  mostrarMensagem("Erro ao carregar: " + (erro.code || erro.message));
+ });
+}
+
+function atualizar(){
+ const total = pedidos.length;
+ const pend = pedidos.filter(p => p.estado === "pendente").length;
+ const aprov = pedidos.filter(p => p.estado === "aprovado").length;
+ const rec = pedidos.filter(p => p.estado === "recusado").length;
+
+ el("todos").textContent = total;
+ el("pendentes").textContent = pend;
+ el("aprovados").textContent = aprov;
+ el("recusados").textContent = rec;
+
+ mostrarMensagem(total ? total + " pedido(s) encontrado(s)." : "Nenhum pedido encontrado.");
+
+ const termo = el("pesquisa").value.toLowerCase().trim();
+ const filtrados = pedidos.filter(p =>
+  String(p.nome || "").toLowerCase().includes(termo) ||
+  String(p.telefone || "").toLowerCase().includes(termo)
+ );
+
+ el("lista").replaceChildren();
+
+ if(!filtrados.length){
+  const vazio = document.createElement("p");
+  vazio.textContent = "Não existem pedidos nesta pesquisa.";
+  el("lista").appendChild(vazio);
+  return;
+ }
+
+ filtrados.forEach(p => {
+  const caixa = document.createElement("div");
+  caixa.className = "pedido";
+
+  const titulo = document.createElement("h3");
+  titulo.textContent = p.nome || "Sem nome";
+  caixa.appendChild(titulo);
+
+  const dados = [
+   "Telefone: " + (p.telefone || "Não indicado"),
+   "Valor: " + (p.valor ?? "Não indicado") + " Kz",
+   "Prazo: " + (p.prazoDias ?? "Não indicado") + " dias",
+   "Rendimento: " + (p.rendimento ?? "Não indicado") + " Kz",
+   "Finalidade: " + (p.finalidade || "Não indicada")
+  ];
+
+  dados.forEach(t => {
+   const linha = document.createElement("p");
+   linha.textContent = t;
+   caixa.appendChild(linha);
+  });
+
+  const estado = document.createElement("p");
+  estado.className = "estado";
+  estado.textContent = "Estado: " + (p.estado || "Não indicado");
+  caixa.appendChild(estado);
+
+  const aprovar = document.createElement("button");
+  aprovar.className = "aprovar";
+  aprovar.textContent = "APROVAR";
+  aprovar.onclick = () => alterarEstado(p.id,"aprovado");
+
+  const recusar = document.createElement("button");
+  recusar.className = "recusar";
+  recusar.textContent = "RECUSAR";
+  recusar.onclick = () => alterarEstado(p.id,"recusado");
+
+  const apagar = document.createElement("button");
+  apagar.className = "apagar";
+  apagar.textContent = "APAGAR";
+  apagar.onclick = () => apagarPedido(p.id);
+
+  caixa.append(aprovar,recusar,apagar);
+  el("lista").appendChild(caixa);
+ });
+}
+
+async function alterarEstado(id,estado){
+ try{
+  await db.collection("pedidos").doc(id).update({estado:estado});
+  mostrarMensagem("Estado atualizado com sucesso!");
+ }catch(e){
+  mostrarMensagem("Erro ao atualizar: " + (e.code || e.message));
+ }
+}
+
+async function apagarPedido(id){
+ if(!confirm("Tem a certeza de que deseja apagar este pedido?")) return;
+
+ try{
+  await db.collection("pedidos").doc(id).delete();
+  mostrarMensagem("Pedido apagado.");
+ }catch(e){
+  mostrarMensagem("Erro ao apagar: " + (e.code || e.message));
+ }
+}
+
+el("pesquisa").addEventListener("input",atualizar);
+
+el("sair").addEventListener("click",async()=>{
+ await auth.signOut();
+});
+
+</script>
+</body>
+</html>
