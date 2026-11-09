@@ -45,4 +45,294 @@ button:disabled{opacity:.5}
 <input id="email" type="email" placeholder="E-mail do administrador">
 <input id="senha" type="password" placeholder="Palavra-passe">
 <button id="entrar" type="button">ENTRAR</button>
-<div id="msgLogin">A pr
+<div id="msgLogin">A preparar ligação ao Firebase...</div>
+</section>
+
+<section id="painel" class="oculto">
+
+<div class="card">
+<h2>📊 Resumo dos pedidos</h2>
+<div class="stats">
+<div class="stat"><strong id="todos">0</strong><span>Todos</span></div>
+<div class="stat"><strong id="pendentes">0</strong><span>Pendentes</span></div>
+<div class="stat"><strong id="aprovados">0</strong><span>Aprovados</span></div>
+<div class="stat"><strong id="recusados">0</strong><span>Recusados</span></div>
+</div>
+</div>
+
+<div class="card">
+<h2>📋 Pedidos recebidos</h2>
+<input id="pesquisa" type="search" placeholder="Pesquisar nome ou telefone">
+<div id="mensagem"></div>
+<div id="lista"></div>
+<button id="sair" type="button">SAIR</button>
+</div>
+
+</section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+ apiKey: "AIzaSyB0EFrVMWXTZukRTeXOCoG6-VJNbAQ8rdE",
+ authDomain: "victoria-credito-angola.firebaseapp.com",
+ projectId: "victoria-credito-angola",
+ appId: "1:259074645009:web:f2b5cfa34e4af15b3725b0"
+};
+
+const UID_ADMIN = "pV7eDfDDZVNPGESer9nYuqyBYJu1";
+
+const el = id => document.getElementById(id);
+
+let auth = null;
+let db = null;
+let pedidos = [];
+let listener = null;
+let firebasePronto = false;
+
+function mensagemLogin(texto){
+ el("msgLogin").textContent = texto;
+}
+
+function mostrarMensagem(texto){
+ el("mensagem").textContent = texto;
+}
+
+function iniciarFirebase(){
+ try{
+  if(!window.firebase){
+   mensagemLogin("Erro: não foi possível carregar o Firebase. Verifique a internet.");
+   return;
+  }
+
+  if(!firebase.apps.length){
+   firebase.initializeApp(firebaseConfig);
+  }
+
+  auth = firebase.auth();
+  db = firebase.firestore();
+  firebasePronto = true;
+
+  mensagemLogin("Firebase carregado. Pode entrar.");
+
+  auth.onAuthStateChanged(function(user){
+   if(listener){
+    listener();
+    listener = null;
+   }
+
+   if(user && user.uid === UID_ADMIN){
+    el("login").classList.add("oculto");
+    el("painel").classList.remove("oculto");
+    carregarPedidos();
+   }else{
+    el("painel").classList.add("oculto");
+    el("login").classList.remove("oculto");
+   }
+  });
+
+ }catch(e){
+  mensagemLogin("Erro ao iniciar Firebase: " + e.message);
+ }
+}
+
+async function entrar(){
+ if(!firebasePronto){
+  mensagemLogin("Firebase ainda não está pronto. Atualize a página e tente novamente.");
+  return;
+ }
+
+ const email = el("email").value.trim();
+ const senha = el("senha").value;
+
+ if(!email || !senha){
+  mensagemLogin("Introduza o e-mail e a palavra-passe.");
+  return;
+ }
+
+ el("entrar").disabled = true;
+ mensagemLogin("A verificar acesso...");
+
+ try{
+  const resultado = await auth.signInWithEmailAndPassword(email,senha);
+
+  if(resultado.user.uid !== UID_ADMIN){
+   await auth.signOut();
+   mensagemLogin("Acesso não autorizado para esta conta.");
+   return;
+  }
+
+  mensagemLogin("Acesso confirmado. A abrir painel...");
+
+ }catch(e){
+  mensagemLogin("Falha no acesso: " + (e.code || e.message));
+ }finally{
+  el("entrar").disabled = false;
+ }
+}
+
+function carregarPedidos(){
+ mostrarMensagem("A carregar pedidos...");
+
+ listener = db.collection("pedidos")
+ .orderBy("criadoEm","desc")
+ .onSnapshot(function(snapshot){
+  pedidos = snapshot.docs.map(function(doc){
+   return {id:doc.id,...doc.data()};
+  });
+  atualizar();
+ },function(erro){
+  mostrarMensagem("Erro ao carregar pedidos: " + (erro.code || erro.message));
+ });
+}
+
+function atualizar(){
+ const total = pedidos.length;
+ const pend = pedidos.filter(p => p.estado === "pendente").length;
+ const aprov = pedidos.filter(p => p.estado === "aprovado").length;
+ const rec = pedidos.filter(p => p.estado === "recusado").length;
+
+ el("todos").textContent = total;
+ el("pendentes").textContent = pend;
+ el("aprovados").textContent = aprov;
+ el("recusados").textContent = rec;
+
+ mostrarMensagem(total ? total + " pedido(s) encontrado(s)." : "Nenhum pedido encontrado.");
+
+ const termo = el("pesquisa").value.toLowerCase().trim();
+ const filtrados = pedidos.filter(p =>
+  String(p.nome || "").toLowerCase().includes(termo) ||
+  String(p.telefone || "").toLowerCase().includes(termo)
+ );
+
+ el("lista").replaceChildren();
+
+ if(!filtrados.length){
+  const vazio = document.createElement("p");
+  vazio.textContent = "Não existem pedidos nesta pesquisa.";
+  el("lista").appendChild(vazio);
+  return;
+ }
+
+ filtrados.forEach(function(p){
+  const caixa = document.createElement("div");
+  caixa.className = "pedido";
+
+  const titulo = document.createElement("h3");
+  titulo.textContent = p.nome || "Sem nome";
+  caixa.appendChild(titulo);
+
+  const dados = [
+   "Telefone: " + (p.telefone || "Não indicado"),
+   "Valor: " + (p.valor ?? "Não indicado") + " Kz",
+   "Prazo: " + (p.prazoDias ?? "Não indicado") + " dias",
+   "Rendimento: " + (p.rendimento ?? "Não indicado") + " Kz",
+   "Finalidade: " + (p.finalidade || "Não indicada")
+  ];
+
+  dados.forEach(function(t){
+   const linha = document.createElement("p");
+   linha.textContent = t;
+   caixa.appendChild(linha);
+  });
+
+  const estado = document.createElement("p");
+  estado.className = "estado";
+  estado.textContent = "Estado: " + (p.estado || "Não indicado");
+  caixa.appendChild(estado);
+
+  const aprovar = document.createElement("button");
+  aprovar.className = "aprovar";
+  aprovar.textContent = "APROVAR";
+  aprovar.onclick = function(){alterarEstado(p.id,"aprovado");};
+
+  const recusar = document.createElement("button");
+  recusar.className = "recusar";
+  recusar.textContent = "RECUSAR";
+  recusar.onclick = function(){alterarEstado(p.id,"recusado");};
+
+  const apagar = document.createElement("button");
+  apagar.className = "apagar";
+  apagar.textContent = "APAGAR";
+  apagar.onclick = function(){apagarPedido(p.id);};
+
+  const whatsapp = document.createElement("button");
+  whatsapp.className = "whatsapp";
+  whatsapp.textContent = "AVISAR PELO WHATSAPP";
+  whatsapp.onclick = function(){avisarWhatsApp(p);};
+
+  caixa.append(aprovar,recusar,apagar,whatsapp);
+  el("lista").appendChild(caixa);
+ });
+}
+
+function avisarWhatsApp(p){
+ let numero = String(p.telefone || "").replace(/\D/g,"");
+
+ if(!numero){
+  mostrarMensagem("Este pedido não tem telefone.");
+  return;
+ }
+
+ if(numero.startsWith("00")) numero = numero.slice(2);
+
+ if(!numero.startsWith("244")){
+  if(numero.startsWith("0")) numero = numero.slice(1);
+  numero = "244" + numero;
+ }
+
+ const nome = p.nome || "Cliente";
+ let texto;
+
+ if(p.estado === "aprovado"){
+  texto = "Olá, " + nome + ". O seu pedido de crédito na Victoria Crédito Angola foi aprovado. Valor solicitado: " + p.valor + " Kz. A nossa equipa entrará em contacto para os próximos passos.";
+ }else if(p.estado === "recusado"){
+  texto = "Olá, " + nome + ". Agradecemos o seu pedido à Victoria Crédito Angola. Após análise, o pedido não foi aprovado. Obrigado pela compreensão.";
+ }else{
+  texto = "Olá, " + nome + ". Recebemos o seu pedido de crédito na Victoria Crédito Angola e ele está em análise. Entraremos em contacto quando houver uma decisão.";
+ }
+
+ const url = "https://wa.me/" + numero + "?text=" + encodeURIComponent(texto);
+ window.location.href = url;
+}
+
+async function alterarEstado(id,estado){
+ try{
+  await db.collection("pedidos").doc(id).update({estado:estado});
+  mostrarMensagem("Estado atualizado com sucesso!");
+ }catch(e){
+  mostrarMensagem("Erro ao atualizar: " + (e.code || e.message));
+ }
+}
+
+async function apagarPedido(id){
+ if(!confirm("Tem a certeza de que deseja apagar este pedido?")) return;
+
+ try{
+  await db.collection("pedidos").doc(id).delete();
+  mostrarMensagem("Pedido apagado.");
+ }catch(e){
+  mostrarMensagem("Erro ao apagar: " + (e.code || e.message));
+ }
+}
+
+el("entrar").addEventListener("click",entrar);
+
+el("senha").addEventListener("keydown",function(e){
+ if(e.key === "Enter") entrar();
+});
+
+el("pesquisa").addEventListener("input",atualizar);
+
+el("sair").addEventListener("click",async function(){
+ if(auth) await auth.signOut();
+});
+
+iniciarFirebase();
+</script>
+
+</body>
+</html>
