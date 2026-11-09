@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Victoria Crédito Angola — Administração</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#050505;color:white;font-family:Arial,sans-serif;padding:15px}
@@ -26,23 +27,22 @@ button:disabled{opacity:.5}
 .stat span{font-size:12px}
 .pedido{background:#202020;border:1px solid #555;border-radius:9px;padding:14px;margin-top:12px;overflow-wrap:anywhere}
 .estado{color:#FFD700;font-weight:bold}
-#mensagem{margin:12px 0;overflow-wrap:anywhere}
+#mensagem,#msgLogin{margin:12px 0;overflow-wrap:anywhere}
 .oculto{display:none}
 @media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
+
 <body>
 
 <header>👑 VICTORIA CRÉDITO ANGOLA</header>
 <div class="sub">Área administrativa</div>
 
 <main>
+
 <section class="card" id="login">
 <h2>🔐 Acesso do administrador</h2>
 <input id="email" type="email" placeholder="E-mail do administrador">
 <input id="senha" type="password" placeholder="Palavra-passe">
-<button id="entrar">ENTRAR</button>
-<div id="msgLogin"></div>
-</section>
-
-<section id=
+<button id="entrar" type="button">ENTRAR</button>
+<div id="msgLogin">A pr
