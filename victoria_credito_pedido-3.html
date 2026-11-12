@@ -4,23 +4,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#050505">
 <title>Victoria Crédito Angola — Pedido de Crédito</title>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:20px;background:#050505;color:white;font-family:Arial,sans-serif}
-header{text-align:center;color:#FFD700;font-size:23px;font-weight:bold;margin:15px 0}
-.sub{text-align:center;color:#ddd;margin-bottom:25px}
-main{max-width:520px;margin:auto;background:#111;padding:22px;border:1px solid #FFD700;border-radius:15px}
-h2{color:#FFD700;text-align:center}
-label{display:block;margin-top:16px;margin-bottom:7px}
-input,select,textarea{width:100%;padding:14px;border-radius:8px;border:1px solid #888;background:#fff;color:#111;font-size:16px}
-button{width:100%;padding:15px;margin-top:22px;border:0;border-radius:9px;background:linear-gradient(90deg,#FFD700,#FFA500);color:#111;font-size:16px;font-weight:bold}
-button:disabled{opacity:.6}
-#mensagem{margin-top:18px;text-align:center;line-height:1.5;overflow-wrap:anywhere}
+
+body{
+  margin:0;
+  padding:20px;
+  background:#050505;
+  color:white;
+  font-family:Arial,sans-serif;
+}
+
+header{
+  text-align:center;
+  color:#FFD700;
+  font-size:23px;
+  font-weight:bold;
+  margin:15px 0;
+}
+
+.sub{
+  text-align:center;
+  color:#ddd;
+  margin-bottom:25px;
+}
+
+main{
+  max-width:520px;
+  margin:auto;
+  background:#111;
+  padding:22px;
+  border:1px solid #FFD700;
+  border-radius:15px;
+}
+
+h2{
+  color:#FFD700;
+  text-align:center;
+}
+
+label{
+  display:block;
+  margin-top:16px;
+  margin-bottom:7px;
+}
+
+input,select{
+  width:100%;
+  padding:14px;
+  border-radius:8px;
+  border:1px solid #888;
+  background:#fff;
+  color:#111;
+  font-size:16px;
+}
+
+button{
+  width:100%;
+  padding:15px;
+  margin-top:22px;
+  border:0;
+  border-radius:9px;
+  background:linear-gradient(90deg,#FFD700,#FFA500);
+  color:#111;
+  font-size:16px;
+  font-weight:bold;
+}
+
+button:disabled{
+  opacity:.6;
+}
+
+#mensagem{
+  margin-top:18px;
+  text-align:center;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+
 a{color:#FFD700}
-.nota{font-size:13px;color:#ccc;margin-top:15px;line-height:1.5}
+
+.nota{
+  font-size:13px;
+  color:#ccc;
+  margin-top:15px;
+  line-height:1.5;
+}
 </style>
 </head>
+
 <body>
 
 <header>👑 VICTORIA CRÉDITO ANGOLA</header>
@@ -30,14 +105,21 @@ a{color:#FFD700}
 <h2>📝 Pedir Crédito</h2>
 
 <form id="formPedido">
+
 <label>Nome completo</label>
-<input id="nome" type="text" placeholder="Digite o seu nome completo" required minlength="3">
+<input id="nome" type="text"
+placeholder="Digite o seu nome completo"
+required minlength="3">
 
 <label>Número do BI</label>
-<input id="bi" type="text" placeholder="Digite o número do BI" required>
+<input id="bi" type="text"
+placeholder="Digite o número do BI"
+required>
 
 <label>Telefone</label>
-<input id="telefone" type="tel" placeholder="Ex.: 929455906" required minlength="9">
+<input id="telefone" type="tel"
+placeholder="Ex.: 929455906"
+required minlength="9">
 
 <label>Valor do crédito</label>
 <select id="valor" required>
@@ -59,7 +141,8 @@ a{color:#FFD700}
 </select>
 
 <label>Rendimento mensal (Kz)</label>
-<input id="rendimento" type="number" min="0" placeholder="Ex.: 15000" required>
+<input id="rendimento" type="number"
+min="0" placeholder="Ex.: 15000" required>
 
 <label>Finalidade do crédito</label>
 <select id="finalidade" required>
@@ -71,11 +154,17 @@ a{color:#FFD700}
 <option value="Outra finalidade">Outra finalidade</option>
 </select>
 
-<button id="enviar" type="submit">ENVIAR PEDIDO PARA ANÁLISE</button>
+<button id="enviar" type="submit">
+ENVIAR PEDIDO PARA ANÁLISE
+</button>
+
 </form>
 
 <div id="mensagem" role="status"></div>
-<p class="nota">Os pedidos ficam sujeitos à análise. O número do BI não é guardado na base de dados Firebase; será incluído apenas na mensagem de WhatsApp após o envio.</p>
+
+<p class="nota">
+Os pedidos ficam sujeitos à análise. O número do BI não é guardado na base de dados Firebase; será incluído apenas na mensagem de WhatsApp após o envio.
+</p>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -91,36 +180,61 @@ const firebaseConfig = {
 
 const mensagem = document.getElementById("mensagem");
 const botao = document.getElementById("enviar");
+
 let db;
 
 try {
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
+
   db = firebase.firestore();
+
 } catch (erro) {
-  mensagem.textContent = "Erro ao iniciar o Firebase. Atualize a página.";
+  mensagem.textContent =
+    "Erro ao iniciar o Firebase. Atualize a página.";
 }
 
-document.getElementById("formPedido").addEventListener("submit", async function(e) {
+document.getElementById("formPedido")
+.addEventListener("submit", async function(e) {
+
   e.preventDefault();
 
   if (!db) {
-    mensagem.textContent = "Firebase não está disponível. Tente novamente.";
+    mensagem.textContent =
+      "Firebase não está disponível. Tente novamente.";
     return;
   }
 
-  const nome = document.getElementById("nome").value.trim();
-  const bi = document.getElementById("bi").value.trim();
-  const telefone = document.getElementById("telefone").value.trim();
-  const valor = Number(document.getElementById("valor").value);
-  const prazoDias = Number(document.getElementById("prazo").value);
-  const rendimento = Number(document.getElementById("rendimento").value);
-  const finalidade = document.getElementById("finalidade").value;
+  const nome =
+    document.getElementById("nome").value.trim();
 
-  if (!nome || !bi || !telefone || !valor || !prazoDias ||
-      !Number.isFinite(rendimento) || rendimento < 0 || !finalidade) {
-    mensagem.textContent = "Por favor, preencha todos os campos corretamente.";
+  const bi =
+    document.getElementById("bi").value.trim();
+
+  const telefone =
+    document.getElementById("telefone").value.trim();
+
+  const valor =
+    Number(document.getElementById("valor").value);
+
+  const prazoDias =
+    Number(document.getElementById("prazo").value);
+
+  const rendimento =
+    Number(document.getElementById("rendimento").value);
+
+  const finalidade =
+    document.getElementById("finalidade").value;
+
+  if (
+    !nome || !bi || !telefone ||
+    !valor || !prazoDias ||
+    !Number.isFinite(rendimento) ||
+    rendimento < 0 || !finalidade
+  ) {
+    mensagem.textContent =
+      "Por favor, preencha todos os campos corretamente.";
     return;
   }
 
@@ -129,6 +243,7 @@ document.getElementById("formPedido").addEventListener("submit", async function(
   mensagem.textContent = "A guardar o pedido. Aguarde...";
 
   try {
+
     await db.collection("pedidos").add({
       nome: nome,
       telefone: telefone,
@@ -140,12 +255,7 @@ document.getElementById("formPedido").addEventListener("submit", async function(
       criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    mensagem.innerHTML =
-      "✅ Pedido guardado com sucesso no Firebase!<br>" +
-      "Para enviar também os dados por WhatsApp, toque no link abaixo:<br>" +
-      '<a id="whatsapp" target="_blank" rel="noopener">Abrir WhatsApp</a>';
-
-    const texto = 
+    const texto =
       "NOVO PEDIDO DE CRÉDITO - VICTORIA CRÉDITO ANGOLA\n\n" +
       "Nome: " + nome + "\n" +
       "BI: " + bi + "\n" +
@@ -155,20 +265,37 @@ document.getElementById("formPedido").addEventListener("submit", async function(
       "Rendimento: " + rendimento + " Kz\n" +
       "Finalidade: " + finalidade;
 
+    const linkWhatsApp =
+      "https://wa.me/244930613327?text=" +
+      encodeURIComponent(texto);
+
+    mensagem.innerHTML =
+      "✅ Pedido guardado com sucesso no Firebase!<br>" +
+      "Para enviar também os dados por WhatsApp, toque no link abaixo:<br>" +
+      '<a id="whatsapp" target="_blank" rel="noopener">Abrir WhatsApp</a>';
+
     document.getElementById("whatsapp").href =
-      "https://wa.me/244941214948?text=" + encodeURIComponent(texto);
+      linkWhatsApp;
 
     document.getElementById("formPedido").reset();
 
   } catch (erro) {
+
     console.error(erro);
-    mensagem.textContent = "Erro ao guardar: " +
-      (erro.code || erro.message || "Verifique a ligação à internet.");
+
+    mensagem.textContent =
+      "Erro ao guardar: " +
+      (erro.code || erro.message ||
+      "Verifique a ligação à internet.");
+
   } finally {
+
     botao.disabled = false;
     botao.textContent = "ENVIAR PEDIDO PARA ANÁLISE";
+
   }
 });
 </script>
+
 </body>
 </html>
